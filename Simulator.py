@@ -6,6 +6,7 @@ from tkinter import *
 from Point import Point
 from Angle import Angle
 from time import sleep
+from Network import Network
 import math
 
 
@@ -74,10 +75,14 @@ class Paint(object):
         # correction error printed here
         self.label_total_error = Label(self.root, text='', font=("Helvetica", 16))
         self.label_total_error.grid(sticky=W, row=0, column=3)
-
         # start button
         self.start_button = Button(self.root, text='Inizia', font=("Helvetica", 16), command=self.start)
         self.start_button.grid(sticky=W, row=0, column=4)
+        self.start_button.grid_propagate(False)
+
+        # what_to_do_label
+        self.label_state = Label(self.root, text='Stato', font=("Helvetica", 16))
+        self.label_state.grid(sticky=W, row=0, column=5, padx= 100)
 
         # getting the coordinates
         left_circle_point = Point(self.circle_center.x - self.radius, self.circle_center.y - self.radius)
@@ -112,44 +117,52 @@ class Paint(object):
 
         self.c.bind('<B1-Motion>', self.paint)
         self.c.bind('<ButtonRelease-1>', self.reset)
+        self.network = Network(0.5,1/2)
+
+        self.label_state['text'] = 'Prova a disegnare e quando sei pronto premi inizia'
 
     # method for writing on whiteboard
     def paint(self, event):
-
+        #check if 360 degrees have been drawn
         if round_corner(self.angle_steps_passed):
-            print("Hai finitooo")
+            self.label_state['text'] = "Hai fatto un angolo giro, ora confronta l'errore con delle precedenti prove"
         else:
             if self.old_point.x and self.old_point.y:
-                # test angle
+
                 if self.first_point_drawn.x and self.first_point_drawn.y:
-
+                    #point drawn
                     p1 = Point(event.x + self.right_shift, event.y)
-
+                    #angle between the center of the cirle, the point drawn and the first point drawn.
                     angle = Angle(self.first_point_drawn, self.circle_center, p1).angle
-
+                    #check where the angle stays.
                     if angle > 0 and angle < 90:
                         self.angle_steps_passed[0] = True
                     elif angle > 90 and angle < 180:
                         self.angle_steps_passed[1] = True
                     elif angle > 270 and angle < 360:
                         self.angle_steps_passed[2] = True
-                    if angle > 359 and self.angle_steps_passed[2]:
+                    if angle > 350 and self.angle_steps_passed[2]:
                         self.angle_steps_passed[3] = True
 
                     print(self.angle_steps_passed)
-
-                sleep(self.DELAY)  # DELAY in seconds
-
+                #object network simulates the network, simulate a packet loss.
+                if self.network.simulate_network():
+                    return
+                #check point is drawn inside the rectangle.
                 if not (event.x < self.left_down_rectangle_point.x or event.x > self.right_up_rectangle_point.x
                         or event.y < self.left_down_rectangle_point.y or event.y > self.right_up_rectangle_point.y):
+
                     self.line_points_id.append(
                         self.c.create_line(self.old_point.x + self.right_shift, self.old_point.y,
                                            event.x + self.right_shift, event.y,
                                            width=self.line_width, fill=self.default_color, capstyle=ROUND, smooth=TRUE,
                                            splinesteps=36))
-
+                    #button "INIZIA" has been pressed"
                     if self.error_start_counter:
+
+                        #First point drawn
                         if self.is_first_point:
+                            self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro'
                             self.is_first_point = False
                             self.line_points_id.append(
                                 self.c.create_line(event.x + self.right_shift, event.y, self.circle_center.x, self.circle_center.y, width=3))
