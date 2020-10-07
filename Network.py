@@ -10,3 +10,6 @@ class Network():
         sleep(self.delay)
         return random() < self.probability_packet_loss
 
+    def has_delay(self):
+        return self.delay > 0
+

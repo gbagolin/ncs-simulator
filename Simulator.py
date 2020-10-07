@@ -5,6 +5,7 @@ __author__ = 'Michele Penzo'
 from tkinter import *
 from Point import Point
 from Angle import Angle
+import numpy as np
 from time import sleep
 from Network import Network
 import math
@@ -75,6 +76,8 @@ class Paint(object):
         # correction error printed here
         self.label_total_error = Label(self.root, text='', font=("Helvetica", 16))
         self.label_total_error.grid(sticky=W, row=0, column=3)
+        self.label_total_error.grid_propagate(False)
+
         # start button
         self.start_button = Button(self.root, text='Inizia', font=("Helvetica", 16), command=self.start)
         self.start_button.grid(sticky=W, row=0, column=4)
@@ -117,7 +120,7 @@ class Paint(object):
 
         self.c.bind('<B1-Motion>', self.paint)
         self.c.bind('<ButtonRelease-1>', self.reset)
-        self.network = Network(0.5,1/2)
+        self.network = Network(0,0)
 
         self.label_state['text'] = 'Prova a disegnare e quando sei pronto premi inizia'
 
@@ -125,7 +128,7 @@ class Paint(object):
     def paint(self, event):
         #check if 360 degrees have been drawn
         if round_corner(self.angle_steps_passed):
-            self.label_state['text'] = "Hai fatto un angolo giro, ora confronta l'errore con delle precedenti prove"
+            self.label_state['text'] = "Hai fatto un angolo giro, ora confronta l'errore con le prove precedenti"
         else:
             if self.old_point.x and self.old_point.y:
 
@@ -164,8 +167,20 @@ class Paint(object):
                         if self.is_first_point:
                             self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro'
                             self.is_first_point = False
+                            x = [event.x + self.right_shift, self.circle_center.x]
+                            y = [event.y, self.circle_center.y]
+                            coefficients = np.polyfit(x, y, 1)
+                            polynomial = np.poly1d(coefficients)
+
+                            point_x1 = (self.right_up_rectangle_point.y  - coefficients[1]) / coefficients[0]
+                            point_y1 = self.right_up_rectangle_point.y
+
+                            point_x2 = (self.left_down_rectangle_point.y - coefficients[1]) / coefficients[0]
+                            point_y2 = self.left_down_rectangle_point.y
+
                             self.line_points_id.append(
-                                self.c.create_line(event.x + self.right_shift, event.y, self.circle_center.x, self.circle_center.y, width=3))
+                                self.c.create_line(event.x + self.right_shift, event.y, point_x1, point_y1, point_x2,point_y2,width=10,fill='blue'))
+
                             self.first_point_drawn.x = event.x + self.right_shift
                             self.first_point_drawn.y = event.y
 
