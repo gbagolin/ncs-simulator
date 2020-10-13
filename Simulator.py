@@ -10,9 +10,16 @@ from time import sleep
 from Network import Network
 import math
 
-
+#check all angle
 def round_corner(angle_steps):
     return all(angle_steps)
+
+#check in range 0,2
+def almost_round_corner(angle_steps):
+    for angle in angle_steps:
+        if not angle:
+            return False
+    return True
 
 
 class Paint(object):
@@ -85,7 +92,7 @@ class Paint(object):
 
         # what_to_do_label
         self.label_state = Label(self.root, text='Stato', font=("Helvetica", 16))
-        self.label_state.grid(sticky=W, row=0, column=5, padx= 100)
+        self.label_state.grid(sticky=W, row=0, column=5, padx=100)
 
         # getting the coordinates
         left_circle_point = Point(self.circle_center.x - self.radius, self.circle_center.y - self.radius)
@@ -94,8 +101,6 @@ class Paint(object):
         self.c.create_oval(left_circle_point.x, left_circle_point.y, right_circle_point.x, right_circle_point.y,
                            outline="#ff0000", fill="#add4d9", width=self.default_pen_size)
 
-        self.c.create_line(self.circle_center.x, self.circle_center.y - self.radius - 10, self.circle_center.x,
-                           self.circle_center.y - self.radius + 10, width=3)
 
         self.c.create_rectangle(self.left_down_rectangle_point.x, self.left_down_rectangle_point.y,
                                 self.right_up_rectangle_point.x, self.right_up_rectangle_point.y, outline="#000000",
@@ -120,38 +125,40 @@ class Paint(object):
 
         self.c.bind('<B1-Motion>', self.paint)
         self.c.bind('<ButtonRelease-1>', self.reset)
-        self.network = Network(0,0)
+        self.network = Network(0.5, 0)
 
         self.label_state['text'] = 'Prova a disegnare e quando sei pronto premi inizia'
 
     # method for writing on whiteboard
     def paint(self, event):
-        #check if 360 degrees have been drawn
+        #instant error
+        # check if 360 degrees have been drawn
         if round_corner(self.angle_steps_passed):
             self.label_state['text'] = "Hai fatto un angolo giro, ora confronta l'errore con le prove precedenti"
+            self.label_total_error['text'] = round(self.total_error - abs(self.distance), 2)
         else:
             if self.old_point.x and self.old_point.y:
 
                 if self.first_point_drawn.x and self.first_point_drawn.y:
-                    #point drawn
+                    # point drawn
                     p1 = Point(event.x + self.right_shift, event.y)
-                    #angle between the center of the cirle, the point drawn and the first point drawn.
+                    # angle between the center of the cirle, the point drawn and the first point drawn.
                     angle = Angle(self.first_point_drawn, self.circle_center, p1).angle
-                    #check where the angle stays.
-                    if angle > 0 and angle < 90:
-                        self.angle_steps_passed[0] = True
-                    elif angle > 90 and angle < 180:
-                        self.angle_steps_passed[1] = True
-                    elif angle > 270 and angle < 360:
-                        self.angle_steps_passed[2] = True
-                    if angle > 350 and self.angle_steps_passed[2]:
+                    # check where the angle stays.
+                    if almost_round_corner(self.angle_steps_passed[:-1]) and angle >= 0 and angle < 90:
                         self.angle_steps_passed[3] = True
+                    elif angle >= 90 and angle < 180:
+                        self.angle_steps_passed[0] = True
+                    elif angle >= 180 and angle < 270:
+                        self.angle_steps_passed[1] = True
+                    elif angle >= 270 and angle < 360:
+                        self.angle_steps_passed[2] = True
 
                     print(self.angle_steps_passed)
-                #object network simulates the network, simulate a packet loss.
+                    # object network simulates the network, simulate a packet loss.
                 if self.network.simulate_network():
                     return
-                #check point is drawn inside the rectangle.
+                # check point is drawn inside the rectangle.
                 if not (event.x < self.left_down_rectangle_point.x or event.x > self.right_up_rectangle_point.x
                         or event.y < self.left_down_rectangle_point.y or event.y > self.right_up_rectangle_point.y):
 
@@ -160,26 +167,28 @@ class Paint(object):
                                            event.x + self.right_shift, event.y,
                                            width=self.line_width, fill=self.default_color, capstyle=ROUND, smooth=TRUE,
                                            splinesteps=36))
-                    #button "INIZIA" has been pressed"
+                    # button "INIZIA" has been pressed"
                     if self.error_start_counter:
 
-                        #First point drawn
+                        # First point drawn
                         if self.is_first_point:
                             self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro'
                             self.is_first_point = False
+                            # CALCULATE STRAIGHT LINE PASSING FROM POINTS (CENTER.X, CENTER.Y) AND (EVENT.X + RIGHT_SHIFT, EVENT.Y)
                             x = [event.x + self.right_shift, self.circle_center.x]
                             y = [event.y, self.circle_center.y]
                             coefficients = np.polyfit(x, y, 1)
-                            polynomial = np.poly1d(coefficients)
 
-                            point_x1 = (self.right_up_rectangle_point.y  - coefficients[1]) / coefficients[0]
+                            point_x1 = (self.right_up_rectangle_point.y - coefficients[1]) / coefficients[0]
                             point_y1 = self.right_up_rectangle_point.y
 
                             point_x2 = (self.left_down_rectangle_point.y - coefficients[1]) / coefficients[0]
                             point_y2 = self.left_down_rectangle_point.y
 
+                            print(coefficients)
                             self.line_points_id.append(
-                                self.c.create_line(event.x + self.right_shift, event.y, point_x1, point_y1, point_x2,point_y2,width=10,fill='blue'))
+                                self.c.create_line(event.x + self.right_shift, event.y, point_x1, point_y1, point_x2,
+                                                   point_y2, width=5, fill='orange'))
 
                             self.first_point_drawn.x = event.x + self.right_shift
                             self.first_point_drawn.y = event.y
@@ -187,16 +196,17 @@ class Paint(object):
                         # calculating distance from center
                         distance_circle = abs(
                             math.sqrt(
-                                (event.x - self.circle_center.x + self.right_shift) ** 2 + (event.y - self.circle_center.y) ** 2) - self.radius)
+                                (event.x - self.circle_center.x + self.right_shift) ** 2 + (
+                                        event.y - self.circle_center.y) ** 2) - self.radius)
 
-                        distance = round(distance_circle, 2)
-
-                        self.total_error += abs(distance)
-                        self.label_error['text'] = round(distance, 2)
+                        self.distance = round(distance_circle, 2)
+                        self.total_error += abs(self.distance)
+                        self.label_error['text'] = round(self.distance, 2)
                         self.label_total_error['text'] = round(self.total_error, 2)
 
             self.old_point.x = event.x
             self.old_point.y = event.y
+
 
     # reset value
     def reset(self, event):
@@ -215,6 +225,7 @@ class Paint(object):
 
         self.is_first_point = True
         self.angle_steps_passed = [False, False, False, False]
+
 
 if __name__ == '__main__':
     Paint()
