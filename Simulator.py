@@ -47,6 +47,8 @@ class Paint(object):
     fourth_quadrant_second_step = False
     step_passed = False
 
+    distance = 0
+
     done = False
 
     # whiteboard
@@ -140,9 +142,11 @@ class Paint(object):
         else:
             if self.old_point.x and self.old_point.y:
 
+
                 # object network simulates the network, simulate a packet loss.
                 if self.network.simulate_network():
                     return
+
                 # check point is drawn inside the rectangle.
                 if not (event.x < self.left_down_rectangle_point.x or event.x > self.right_up_rectangle_point.x
                         or event.y < self.left_down_rectangle_point.y or event.y > self.right_up_rectangle_point.y):
@@ -172,7 +176,7 @@ class Paint(object):
 
                             print(coefficients)
                             self.line_points_id.append(
-                                self.c.create_line(event.x + self.right_shift, event.y, point_x1, point_y1, point_x2,
+                                self.c.create_line(point_x1, point_y1, point_x2,
                                                    point_y2, width=5, fill='orange'))
 
                             self.first_point_drawn.x = event.x + self.right_shift
@@ -204,16 +208,26 @@ class Paint(object):
                             elif self.fourth_quadrant and self.step_passed and angle > 270 and angle < 360 and not self.is_second_point_drawn:
                                 self.done = True
 
-                        # calculating distance from center
-                        distance_circle = abs(
-                            math.sqrt(
-                                (event.x - self.circle_center.x + self.right_shift) ** 2 + (
-                                        event.y - self.circle_center.y) ** 2) - self.radius)
+            # calculating distance from center
+            distance_circle = abs(
+                math.sqrt(
+                          (event.x - self.circle_center.x + self.right_shift) ** 2 + (
+                           event.y - self.circle_center.y) ** 2) - self.radius)
 
-                        self.distance = round(distance_circle, 2)
-                        self.total_error += abs(self.distance)
-                        self.label_error['text'] = round(self.distance, 2)
-                        self.label_total_error['text'] = round(self.total_error, 2)
+            distance_between_old_evn_new_evn = 0
+            old_error = self.distance
+            if self.network.has_delay() and self.old_point.x and self.old_point.y:
+                distance_between_old_evn_new_evn = abs(
+                    math.sqrt(
+                        (event.x - self.old_point.x + self.right_shift) ** 2 + (
+                                event.y - self.old_point.y) ** 2) - self.radius)
+
+
+
+            self.distance = round(distance_circle, 2)
+            self.total_error += abs(self.distance) + round(distance_between_old_evn_new_evn, 2) * old_error
+            self.label_error['text'] = round(self.distance, 2)
+            self.label_total_error['text'] = round(self.total_error, 2)
 
             self.old_point.x = event.x
             self.old_point.y = event.y
