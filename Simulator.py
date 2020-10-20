@@ -36,8 +36,6 @@ class Paint(object):
     first_point_drawn = Point(None, None)
     # right shift, from scratchpad to circle
     right_shift = 800
-    # 90   #180   #270   #360
-    angle_steps_passed = [False, False, False, False]
 
     first_quadrant = False
     fourth_quadrant = False
@@ -47,6 +45,7 @@ class Paint(object):
     button_released = False
     first_quadrant_second_step = False
     fourth_quadrant_second_step = False
+    step_passed = False
 
     done = False
 
@@ -136,35 +135,12 @@ class Paint(object):
             self.label_total_error['text'] = round(self.total_error - abs(self.distance), 2)
 
         elif self.done and self.button_released:
-            self.label_state['text'] = "Hai rilasciato il mouse, esperimento non valido"
+            self.label_state['text'] = "Hai fatto un angolo giro, ma hai rilasciato il mouse, esperimento non valido"
             self.label_total_error['text'] = round(self.total_error - abs(self.distance), 2)
         else:
             if self.old_point.x and self.old_point.y:
 
-                if self.first_point_drawn.x and self.first_point_drawn.y:
-                    # point drawn
-                    p1 = Point(event.x + self.right_shift, event.y)
-                    # angle between the center of the cirle, the point drawn and the first point drawn.
-                    angle = Angle(self.first_point_drawn, self.circle_center, p1).angle
-                    # check where the angle stays.
-                    print(angle)
-
-                    if self.is_second_point_drawn:
-                        self.is_second_point_drawn = False
-                        print("sono dentro 1")
-                        if angle > 0 and angle < 90:
-                            self.first_quadrant = True
-                        elif angle > 270 and angle < 360:
-                            self.fourth_quadrant = True
-
-                    if self.first_quadrant:
-                        print('sono dentro')
-                        if angle > 270 and angle < 360:
-                            self.fourth_quadrant_second_step = True
-                        if angle > 0 and angle < 90 and self.fourth_quadrant_second_step:
-                            self.done = True
-
-                    # object network simulates the network, simulate a packet loss.
+                # object network simulates the network, simulate a packet loss.
                 if self.network.simulate_network():
                     return
                 # check point is drawn inside the rectangle.
@@ -202,6 +178,32 @@ class Paint(object):
                             self.first_point_drawn.x = event.x + self.right_shift
                             self.first_point_drawn.y = event.y
 
+                        if self.first_point_drawn.x and self.first_point_drawn.y:
+                            # point drawn
+                            p1 = Point(event.x + self.right_shift, event.y)
+                            # angle between the center of the cirle, the point drawn and the first point drawn.
+                            angle = Angle(self.first_point_drawn, self.circle_center, p1).angle
+                            # check where the angle stays.
+                            print(angle)
+
+                            if angle > 0 and angle < 90 and self.is_second_point_drawn:
+                                self.is_second_point_drawn = False
+                                self.first_quadrant = True
+                                self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro in senso ORARIO'
+                            elif angle > 90 and self.first_quadrant:
+                                self.step_passed = True
+                            elif self.first_quadrant and self.step_passed and angle > 0 and angle < 90 and not self.is_second_point_drawn:
+                                self.done = True
+
+                            if angle > 270 and angle < 360 and self.is_second_point_drawn:
+                                self.is_second_point_drawn = False
+                                self.fourth_quadrant = True
+                                self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro in senso ANTI-ORARIO'
+                            elif angle < 270 and self.fourth_quadrant:
+                                self.step_passed = True
+                            elif self.fourth_quadrant and self.step_passed and angle > 270 and angle < 360 and not self.is_second_point_drawn:
+                                self.done = True
+
                         # calculating distance from center
                         distance_circle = abs(
                             math.sqrt(
@@ -234,12 +236,12 @@ class Paint(object):
             self.c.delete(point)
 
         self.is_first_point = True
-        self.button_released = False
-        self.done = False
         self.is_second_point_drawn = True
+        self.step_passed = False
+        self.done = False
+        self.button_released = False
         self.first_quadrant = False
-        self.fourth_quadrant_second_step = False
-
+        self.fourth_quadrant = False
 
 if __name__ == '__main__':
     Paint()
