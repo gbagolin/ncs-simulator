@@ -15,11 +15,6 @@ class Paint(object):
     default_pen_size = 4.0
     default_color = 'black'
 
-    # ------------------------------
-    # ---- max delay in seconds ----
-    DELAY = 0
-    total_error = 0
-
     line_points_id = []
 
     # starting coordinate of circle --> not the center of monitor
@@ -29,9 +24,17 @@ class Paint(object):
     error_start_counter = False
     is_first_point = True
 
+    max_drawable_x = 300
+
     # coordinates of rectangle
     left_down_rectangle_point = Point(100, circle_center.y - 400)
     right_up_rectangle_point = Point(800, circle_center.y + 400)
+
+    left_down_rectangle_point_green_area_1 = Point(100 + 100, circle_center.y - 400)
+    right_up_rectangle_point_green_area_1 = Point(800 - 100, max_drawable_x)
+
+    left_down_rectangle_point_green_area_2 = Point(100 + 100, circle_center.y + 400)
+    right_up_rectangle_point_green_area_2 = Point(800 - 100, 700)
 
     first_point_drawn = Point(None, None)
     # right shift, from scratchpad to circle
@@ -50,6 +53,8 @@ class Paint(object):
     distance = 0
 
     done = False
+
+    rec_pressed = False
 
     # whiteboard
     def __init__(self):
@@ -99,7 +104,6 @@ class Paint(object):
         self.c.create_oval(left_circle_point.x, left_circle_point.y, right_circle_point.x, right_circle_point.y,
                            outline="#ff0000", fill="#add4d9", width=self.default_pen_size)
 
-
         self.c.create_rectangle(self.left_down_rectangle_point.x, self.left_down_rectangle_point.y,
                                 self.right_up_rectangle_point.x, self.right_up_rectangle_point.y, outline="#000000",
                                 fill="#bfbfbf",
@@ -113,7 +117,6 @@ class Paint(object):
         self.setup()
 
         self.root.mainloop()
-
 
     # set base values
     def setup(self):
@@ -130,7 +133,7 @@ class Paint(object):
 
     # method for writing on whiteboard
     def paint(self, event):
-        #instant error
+        # instant error
         # check if 360 degrees have been drawn
         if self.done and not self.button_released:
             self.label_state['text'] = "Hai fatto un angolo giro, ora confronta l'errore con le prove precedenti"
@@ -142,7 +145,6 @@ class Paint(object):
         else:
             if self.old_point.x and self.old_point.y:
 
-
                 # object network simulates the network, simulate a packet loss.
                 if self.network.simulate_network():
                     return
@@ -151,93 +153,108 @@ class Paint(object):
                 if not (event.x < self.left_down_rectangle_point.x or event.x > self.right_up_rectangle_point.x
                         or event.y < self.left_down_rectangle_point.y or event.y > self.right_up_rectangle_point.y):
 
-                    self.line_points_id.append(
-                        self.c.create_line(self.old_point.x + self.right_shift, self.old_point.y,
-                                           event.x + self.right_shift, event.y,
-                                           width=self.line_width, fill=self.default_color, capstyle=ROUND, smooth=TRUE,
-                                           splinesteps=36))
                     # button "INIZIA" has been pressed"
                     if self.error_start_counter:
 
                         # First point drawn
                         if self.is_first_point:
-                            self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro'
-                            self.is_first_point = False
-                            # CALCULATE STRAIGHT LINE PASSING FROM POINTS (CENTER.X, CENTER.Y) AND (EVENT.X + RIGHT_SHIFT, EVENT.Y)
-                            x = [event.x + self.right_shift, self.circle_center.x]
-                            y = [event.y, self.circle_center.y]
-                            coefficients = np.polyfit(x, y, 1)
+                            print(self.rec_pressed)
+                            if self.rec_pressed:
+                                self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro'
+                                self.is_first_point = False
+                                # CALCULATE STRAIGHT LINE PASSING FROM POINTS (CENTER.X, CENTER.Y) AND (EVENT.X + RIGHT_SHIFT, EVENT.Y)
+                                x = [event.x + self.right_shift, self.circle_center.x]
+                                y = [event.y, self.circle_center.y]
+                                coefficients = np.polyfit(x, y, 1)
 
-                            point_x1 = (self.right_up_rectangle_point.y - coefficients[1]) / coefficients[0]
-                            point_y1 = self.right_up_rectangle_point.y
+                                point_x1 = ((self.right_up_rectangle_point.y - coefficients[1]) / coefficients[0])
+                                point_y1 = self.right_up_rectangle_point.y
 
-                            point_x2 = (self.left_down_rectangle_point.y - coefficients[1]) / coefficients[0]
-                            point_y2 = self.left_down_rectangle_point.y
+                                point_x2 = ((self.left_down_rectangle_point.y - coefficients[1]) / coefficients[0])
+                                point_y2 = self.left_down_rectangle_point.y
 
-                            print(coefficients)
-                            self.line_points_id.append(
-                                self.c.create_line(point_x1, point_y1, point_x2,
-                                                   point_y2, width=5, fill='orange'))
+                                # print(coefficients)
 
-                            self.first_point_drawn.x = event.x + self.right_shift
-                            self.first_point_drawn.y = event.y
+                                line_id = self.c.create_line(point_x1, point_y1, point_x2, point_y2, width=7,
+                                                             fill='orange')
 
-                        if self.first_point_drawn.x and self.first_point_drawn.y:
-                            # point drawn
-                            p1 = Point(event.x + self.right_shift, event.y)
-                            # angle between the center of the cirle, the point drawn and the first point drawn.
-                            angle = Angle(self.first_point_drawn, self.circle_center, p1).angle
-                            # check where the angle stays.
-                            print(angle)
+                                self.line_points_id.append(line_id)
 
-                            if angle > 0 and angle < 90 and self.is_second_point_drawn:
-                                self.is_second_point_drawn = False
-                                self.first_quadrant = True
-                                self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro in senso ORARIO'
-                            elif angle > 90 and self.first_quadrant:
-                                self.step_passed = True
-                            elif self.first_quadrant and self.step_passed and angle > 0 and angle < 90 and not self.is_second_point_drawn:
-                                self.done = True
+                                self.first_point_drawn.x = event.x + self.right_shift
+                                self.first_point_drawn.y = event.y
+                                self.c.delete(self.rectangle_up_id)
+                                self.c.delete(self.rectangle_down_id)
+                        else:
+                            if self.first_point_drawn.x and self.first_point_drawn.y:
+                                line_id = self.c.create_line(self.old_point.x + self.right_shift, self.old_point.y,
+                                                             event.x + self.right_shift, event.y,
+                                                             width=self.line_width, fill=self.default_color,
+                                                             capstyle=ROUND,
+                                                             smooth=TRUE,
+                                                             splinesteps=36)
 
-                            if angle > 270 and angle < 360 and self.is_second_point_drawn:
-                                self.is_second_point_drawn = False
-                                self.fourth_quadrant = True
-                                self.label_state['text'] = 'Ricalca la circonferenza facendo un angolo giro in senso ANTI-ORARIO'
-                            elif angle < 270 and self.fourth_quadrant:
-                                self.step_passed = True
-                            elif self.fourth_quadrant and self.step_passed and angle > 270 and angle < 360 and not self.is_second_point_drawn:
-                                self.done = True
+                                self.line_points_id.append(line_id)
 
-            # calculating distance from center
-            distance_circle = abs(
-                math.sqrt(
-                          (event.x - self.circle_center.x + self.right_shift) ** 2 + (
-                           event.y - self.circle_center.y) ** 2) - self.radius)
+                                # calculating distance from center
+                                distance_circle = abs(
+                                    math.sqrt(
+                                        (event.x - self.circle_center.x + self.right_shift) ** 2 + (
+                                                event.y - self.circle_center.y) ** 2) - self.radius)
 
-            distance_between_old_evn_new_evn = 0
-            old_error = self.distance
-            if self.network.has_delay() and self.old_point.x and self.old_point.y:
-                distance_between_old_evn_new_evn = abs(
-                    math.sqrt(
-                        (event.x - self.old_point.x + self.right_shift) ** 2 + (
-                                event.y - self.old_point.y) ** 2) - self.radius)
+                                distance_between_old_evn_new_evn = 0
+                                old_error = self.distance
+                                if self.network.has_delay() and self.old_point.x and self.old_point.y:
+                                    distance_between_old_evn_new_evn = abs(
+                                        math.sqrt(
+                                            (event.x - self.old_point.x + self.right_shift) ** 2 + (
+                                                    event.y - self.old_point.y) ** 2) - self.radius)
+
+                                self.distance = round(distance_circle, 2)
+                                self.total_error += abs(self.distance) + round(distance_between_old_evn_new_evn,
+                                                                               2) * old_error
+                                self.label_error['text'] = round(self.distance, 2)
+                                self.label_total_error['text'] = round(self.total_error, 2)
+
+                                # point drawn
+                                p1 = Point(event.x + self.right_shift, event.y)
+                                # angle between the center of the cirle, the point drawn and the first point drawn.
+                                angle = Angle(self.first_point_drawn, self.circle_center, p1).angle
+                                # check where the angle stays.
+                                # print(angle)
+
+                                if angle > 0 and angle < 90 and self.is_second_point_drawn:
+                                    self.is_second_point_drawn = False
+                                    self.first_quadrant = True
+                                    self.label_state[
+                                        'text'] = 'Ricalca la circonferenza facendo un angolo giro in senso ORARIO'
+                                elif angle > 90 and self.first_quadrant:
+                                    self.step_passed = True
+                                elif self.first_quadrant and self.step_passed and angle > 0 and angle < 90 and not self.is_second_point_drawn:
+                                    self.done = True
+
+                                if angle > 270 and angle < 360 and self.is_second_point_drawn:
+                                    self.is_second_point_drawn = False
+                                    self.fourth_quadrant = True
+                                    self.label_state[
+                                        'text'] = 'Ricalca la circonferenza facendo un angolo giro in senso ANTI-ORARIO'
+                                elif angle < 270 and self.fourth_quadrant:
+                                    self.step_passed = True
+                                elif self.fourth_quadrant and self.step_passed and angle > 270 and angle < 360 and not self.is_second_point_drawn:
+                                    self.done = True
 
 
-
-            self.distance = round(distance_circle, 2)
-            self.total_error += abs(self.distance) + round(distance_between_old_evn_new_evn, 2) * old_error
-            self.label_error['text'] = round(self.distance, 2)
-            self.label_total_error['text'] = round(self.total_error, 2)
 
             self.old_point.x = event.x
             self.old_point.y = event.y
-
 
     # reset value
     def reset(self, event):
         self.old_point.x = None
         self.old_point.y = None
         self.button_released = True
+
+    def rec_event(self, event):
+        self.rec_pressed = True
 
     def start(self):
         self.error_start_counter = True
@@ -256,6 +273,30 @@ class Paint(object):
         self.button_released = False
         self.first_quadrant = False
         self.fourth_quadrant = False
+        self.first_point_drawn.x = None
+        self.first_point_drawn.y = None
+
+        self.rectangle_up_id = self.c.create_rectangle(self.left_down_rectangle_point_green_area_1.x,
+                                                       self.left_down_rectangle_point_green_area_1.y,
+                                                       self.right_up_rectangle_point_green_area_1.x,
+                                                       self.right_up_rectangle_point_green_area_1.y,
+                                                       outline="#000000",
+                                                       fill="green",
+                                                       width=self.default_pen_size
+                                                       )
+
+        self.rectangle_down_id = self.c.create_rectangle(self.left_down_rectangle_point_green_area_2.x,
+                                                         self.left_down_rectangle_point_green_area_2.y,
+                                                         self.right_up_rectangle_point_green_area_2.x,
+                                                         self.right_up_rectangle_point_green_area_2.y,
+                                                         outline="#000000",
+                                                         fill="green",
+                                                         width=self.default_pen_size
+                                                         )
+        self.c.tag_bind(self.rectangle_up_id, "<Button-1>", self.rec_event)
+        self.c.tag_bind(self.rectangle_down_id, "<Button-1>", self.rec_event)
+        self.rec_pressed = False
+
 
 if __name__ == '__main__':
     Paint()
