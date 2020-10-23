@@ -134,7 +134,7 @@ class Paint(object):
     # method for writing on whiteboard
     def paint(self, event):
         # instant error
-        # check if 360 degrees have been drawn
+        # check if 360 degrees have been drawn and button not released
         if self.done and not self.button_released:
             self.label_state['text'] = "Hai fatto un angolo giro, ora confronta l'errore con le prove precedenti"
             self.label_total_error['text'] = round(self.total_error - abs(self.distance), 2)
@@ -156,7 +156,7 @@ class Paint(object):
                     # button "INIZIA" has been pressed"
                     if self.error_start_counter:
 
-                        # First point drawn
+                        # if first point has been drawn
                         if self.is_first_point:
                             print(self.rec_pressed)
                             if self.rec_pressed:
@@ -166,7 +166,9 @@ class Paint(object):
                                 x = [event.x + self.right_shift, self.circle_center.x]
                                 y = [event.y, self.circle_center.y]
                                 coefficients = np.polyfit(x, y, 1)
-
+                                #calculate point where the line has to pass using the equation of the straight line,
+                                # y = mx + q,
+                                # x = (y - q)/m
                                 point_x1 = ((self.right_up_rectangle_point.y - coefficients[1]) / coefficients[0])
                                 point_y1 = self.right_up_rectangle_point.y
 
@@ -184,7 +186,9 @@ class Paint(object):
                                 self.first_point_drawn.y = event.y
                                 self.c.delete(self.rectangle_up_id)
                                 self.c.delete(self.rectangle_down_id)
+                        #not the first point drawn
                         else:
+                            #if points are defined
                             if self.first_point_drawn.x and self.first_point_drawn.y:
                                 line_id = self.c.create_line(self.old_point.x + self.right_shift, self.old_point.y,
                                                              event.x + self.right_shift, event.y,
@@ -203,13 +207,16 @@ class Paint(object):
 
                                 distance_between_old_evn_new_evn = 0
                                 old_error = self.distance
-                                if self.network.has_delay() and self.old_point.x and self.old_point.y:
+                                #in case of error the distance between the last point drawn before the delay and
+                                #the first point drawn after the delay has been applied is calculated.
+                                if (self.network.has_delay() or self.network.has_packet_loss()) and self.old_point.x and self.old_point.y:
                                     distance_between_old_evn_new_evn = abs(
                                         math.sqrt(
                                             (event.x - self.old_point.x + self.right_shift) ** 2 + (
                                                     event.y - self.old_point.y) ** 2) - self.radius)
 
                                 self.distance = round(distance_circle, 2)
+                                #total error is the instant error + the distance just calculated.
                                 self.total_error += abs(self.distance) + round(distance_between_old_evn_new_evn,
                                                                                2) * old_error
                                 self.label_error['text'] = round(self.distance, 2)
@@ -222,6 +229,8 @@ class Paint(object):
                                 # check where the angle stays.
                                 # print(angle)
 
+                                #check in which quadrant the point is w.r.t the first point drawn and the center of the circle.
+                                #clockwise round.
                                 if angle > 0 and angle < 90 and self.is_second_point_drawn:
                                     self.is_second_point_drawn = False
                                     self.first_quadrant = True
@@ -231,7 +240,7 @@ class Paint(object):
                                     self.step_passed = True
                                 elif self.first_quadrant and self.step_passed and angle > 0 and angle < 90 and not self.is_second_point_drawn:
                                     self.done = True
-
+                                #anticlockwise round
                                 if angle > 270 and angle < 360 and self.is_second_point_drawn:
                                     self.is_second_point_drawn = False
                                     self.fourth_quadrant = True
@@ -241,8 +250,6 @@ class Paint(object):
                                     self.step_passed = True
                                 elif self.fourth_quadrant and self.step_passed and angle > 270 and angle < 360 and not self.is_second_point_drawn:
                                     self.done = True
-
-
 
             self.old_point.x = event.x
             self.old_point.y = event.y
