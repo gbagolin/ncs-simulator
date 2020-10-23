@@ -3,8 +3,8 @@ from random import random
 
 class Network():
     def __init__(self):
-        self.delay = 0.5
-        self.probability_packet_loss = 0.1
+        self.delay = 0
+        self.probability_packet_loss = 0
 
     def simulate_network(self):
         sleep(self.delay)

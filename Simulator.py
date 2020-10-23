@@ -74,23 +74,23 @@ class Paint(object):
 
         # distance labele
         self.label = Label(self.root, text='Errore --->   ', font=("Helvetica", 16))
-        self.label.grid(sticky=E, row=0, column=0)
+        self.label.grid(sticky=E, row=0, column=1)
 
         # correction error printed here
         self.label_error = Label(self.root, text='', font=("Helvetica", 16))
-        self.label_error.grid(sticky=W, row=0, column=1)
+        self.label_error.grid(sticky=W, row=0, column=2)
 
         self.label = Label(self.root, text='Errore complessivo --->   ', font=("Helvetica", 16))
-        self.label.grid(sticky=E, row=0, column=2)
+        self.label.grid(sticky=E, row=0, column=3)
 
         # correction error printed here
         self.label_total_error = Label(self.root, text='', font=("Helvetica", 16))
-        self.label_total_error.grid(sticky=W, row=0, column=3)
+        self.label_total_error.grid(sticky=W, row=0, column=4)
         self.label_total_error.grid_propagate(False)
 
         # start button
         self.start_button = Button(self.root, text='Inizia', font=("Helvetica", 16), command=self.start)
-        self.start_button.grid(sticky=W, row=0, column=4)
+        self.start_button.grid(sticky=W, row=0, column=0)
         self.start_button.grid_propagate(False)
 
         # what_to_do_label
@@ -129,7 +129,7 @@ class Paint(object):
         self.c.bind('<ButtonRelease-1>', self.reset)
         self.network = Network()
 
-        self.label_state['text'] = 'Prova a disegnare e quando sei pronto premi inizia'
+        self.label_state['text'] = 'Premi inizia per disegnare.'
 
     # method for writing on whiteboard
     def paint(self, event):
@@ -303,6 +303,9 @@ class Paint(object):
         self.c.tag_bind(self.rectangle_up_id, "<Button-1>", self.rec_event)
         self.c.tag_bind(self.rectangle_down_id, "<Button-1>", self.rec_event)
         self.rec_pressed = False
+
+        self.label_state[
+            'text'] = 'Inizia disegnando su uno dei due rettangoli verdi per vedere l\'asse.'
 
 
 if __name__ == '__main__':
