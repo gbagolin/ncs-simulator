@@ -7,8 +7,10 @@ class Network():
         self.probability_packet_loss = 0
 
     def simulate_network(self):
+        if random() < self.probability_packet_loss:
+            return 1
         sleep(self.delay)
-        return random() < self.probability_packet_loss
+        return 0
 
     def has_delay(self):
         return self.delay > 0

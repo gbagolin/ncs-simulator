@@ -56,6 +56,8 @@ class Paint(object):
 
     rec_pressed = False
 
+    packet_lost = 0
+
     # whiteboard
     def __init__(self):
         self.root = Tk()
@@ -145,8 +147,10 @@ class Paint(object):
         else:
             if self.old_point.x and self.old_point.y:
 
+
                 # object network simulates the network, simulate a packet loss.
                 if self.network.simulate_network():
+                    self.packet_lost = 1
                     return
 
                 # check point is drawn inside the rectangle.
@@ -209,16 +213,17 @@ class Paint(object):
                                 old_error = self.distance
                                 #in case of error the distance between the last point drawn before the delay and
                                 #the first point drawn after the delay has been applied is calculated.
-                                if (self.network.has_delay() or self.network.has_packet_loss()) and self.old_point.x and self.old_point.y:
+                                if (self.network.has_delay() or self.packet_lost) and self.old_point.x and self.old_point.y:
                                     distance_between_old_evn_new_evn = abs(
                                         math.sqrt(
                                             (event.x - self.old_point.x + self.right_shift) ** 2 + (
                                                     event.y - self.old_point.y) ** 2) - self.radius)
+                                    self.packet_lost = 0
 
                                 self.distance = round(distance_circle, 2)
                                 #total error is the instant error + the distance just calculated.
                                 self.total_error += abs(self.distance) + round(distance_between_old_evn_new_evn,
-                                                                               2) * old_error
+                                                                               2) * (old_error + self.distance) / 2
                                 self.label_error['text'] = round(self.distance, 2)
                                 self.label_total_error['text'] = round(self.total_error, 2)
 
