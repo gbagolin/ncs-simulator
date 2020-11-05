@@ -2,7 +2,7 @@
 
 ### **Install**
 
-In order to run correctly the software install, download the repository
+In order to run correctly the software, download the repository
 and install the requirements using
 
 `python -m pip install -r requirements.txt`
